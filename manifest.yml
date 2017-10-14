@@ -1,0 +1,6 @@
+---
+applications:
+- name: wws-af-ro
+  memory: 128M
+  host: wws-af-ro
+  domain: mybluemix.net
