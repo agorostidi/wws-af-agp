@@ -7,10 +7,11 @@ var bodyParser = require("body-parser");
 var request = require("request");
 var requestjs = require("request-json");
 var crypto = require("crypto");
+//var moment = require('moment');
 
-var APP_ID = "2313???";
-var APP_SECRET = "9wxu???";
-var APP_WEBHOOK_SECRET = "n8zf???";
+var APP_ID = "37??";
+var APP_SECRET = "uC??";
+var APP_WEBHOOK_SECRET = "7v??";
 var SPACE_ID = "5819???";
 
 // --------------------------------------------------------------------------
@@ -96,146 +97,12 @@ app.post("/callback", jsonParser, function(req, res) {
 
     // Act only on the events we need
     if (eventType === "message-annotation-added") {
+        // Message Annotation Added Code Here
 
-      // Action fulfillment callback - When user clicks and engages with App
-      if (annotationType === "actionSelected") {
-  	  var userName = req.body.userName;
-        console.log("------- AF -------------------------------")
-        console.log("%s clicked on an action link.", userName);
-
-        // Extract the necessary info
-        var targetUserId = req.body.userId;
-        var conversationId = annotationPayload.conversationId;
-        var targetDialogId = annotationPayload.targetDialogId;
-        var referralMessageId = annotationPayload.referralMessageId;
-        var actionId = annotationPayload.actionId;
-        console.log("Action : %s", actionId);
-        console.log("Referral Message Id : %s", referralMessageId);
-
-        var gqlmessage = "query getMessage {message(id: \"" + referralMessageId + "\") {annotations}}";
-  	    // First click on underlined message
-        if (actionId === "Get_Demo_Assets") {
-  		      // We first need to get back the annotations of the originating message to get the possible search terms.
-            getAuthFromAppIdSecret(APP_ID, APP_SECRET, function(error, accessToken) {
-              if (error) {
-                console.log("Unable to authenticate. No results will be shown.");
-              } else {
-                callGraphQL(accessToken, gqlmessage, function(error, bodyParsed, accessToken) {
-                  if (!error) {
-                    var msgannotations = bodyParsed.data.message.annotations;
-
-                    // Loop over all the annotations and get the one we need
-                    for (var i = 0; i < msgannotations.length; i++) {
-                      var ann = JSON.parse(msgannotations[i]);
-
-                      // React on message-focus to catch the expert query
-                      if (ann.type === "message-focus") {
-                        // Get the lens of the focus
-                        var lens = ann.lens;
-
-                        // Only react on lens 'demo-asset'
-                        if (lens === "demo-asset") {
-                          console.log("Received Demo Asset Query : " + ann.phrase);
-
-                          var confidence = ann.confidence;
-                          var extractedInfo = ann.extractedInfo;
-  					              var entities = extractedInfo.entities;
-  					              var arrayLength = entities.length;
-  					              var product = "";
-  					              for (var j = 0; j < arrayLength; j++) {
-                            if (entities[j].type === "product"){
-                              product = entities[j].text;
-                            }
-                          }
-
-  					              // Preparing the dialog message
-                          var afgraphql1 = "mutation {createTargetedMessage(input: {conversationId: \"" + conversationId + "\" targetUserId: \"" + targetUserId + "\" targetDialogId: \"" + targetDialogId + "\" attachments: [";
-                          var afgraphql3 = "]}){successful}}";
-                          var afgraphql2 = "";
-                          var cardtitle = "";
-                          var cardtext = "";
-                          var buttontext = "SHARE";
-                          var buttonpayload = "SHARE-";
-
-                          if (product === "IBM Verse"){
-                            for (var i = 0; i < 5; i++) {
-                              if (i == 0) {
-                                cardtitle = "IBM Verse Video Demos";
-                                cardtext = "Are you looking for IBM Verse video, here is right place to go. Basic and Administration Videos Available for you.";
-                                buttonpayload += "VERSE-00";
-                                afgraphql2 += "{type:CARD, cardInput:{type:INFORMATION, informationCardInput: {title: \"" + cardtitle + "\", text: \"" + cardtext + "\",buttons: [{text: \"" + buttontext + "\", payload: \"" + buttonpayload + "\", style: PRIMARY}]}}}";
-                              }
-                              else {
-                                afgraphql2 += ",";
-                                if (i==1){
-                  								cardtitle = "IBM Verse Conversation Guide";
-                  								cardtext = "This asset will help you to be prepared for a Conversation with a Customer.";
-                  								buttonpayload += "VERSE-01";
-                  								afgraphql2 += "{type:CARD, cardInput:{type:INFORMATION, informationCardInput: {title: \"" + cardtitle + "\", text: \"" + cardtext + "\",buttons: [{text: \"" + buttontext + "\", payload: \"" + buttonpayload + "\", style: PRIMARY}]}}}";
-                                } else if (i==2) {
-                                  cardtitle = "IBM Verse Visualization Assets";
-                                  cardtext = "Visit this page to see a list of amazing IBM Verse Click-through Demos using InVision.";
-                                  buttonpayload += "VERSE-02";
-                                  afgraphql2 += "{type:CARD, cardInput:{type:INFORMATION, informationCardInput: {title: \"" + cardtitle + "\", text: \"" + cardtext + "\",buttons: [{text: \"" + buttontext + "\", payload: \"" + buttonpayload + "\", style: PRIMARY}]}}}";
-                                } else if (i==3) {
-                                  cardtitle = "IBM Verse Live Environment";
-                                  cardtext = "Are you looking for Live Environment to deliver an IBM Verse Demo. In this wiki page you will learn how to request a demo environment.";
-                                  buttonpayload += "VERSE-03";
-                                  afgraphql2 += "{type:CARD, cardInput:{type:INFORMATION, informationCardInput: {title: \"" + cardtitle + "\", text: \"" + cardtext + "\",buttons: [{text: \"" + buttontext + "\", payload: \"" + buttonpayload + "\", style: PRIMARY}]}}}";
-                                } else if (i==4) {
-                                  cardtitle = "IBM Verse Client Presentation";
-                                  cardtext = "Do you need an IBM Verse Presentation for a Customer Meeting? Here is the right place to see different type of presentations";
-                                  buttonpayload += "VERSE-04";
-                                  afgraphql2 += "{type:CARD, cardInput:{type:INFORMATION, informationCardInput: {title: \"" + cardtitle + "\", text: \"" + cardtext + "\",buttons: [{text: \"" + buttontext + "\", payload: \"" + buttonpayload + "\", style: PRIMARY}]}}}";
-                                }
-                              }
-                            }
-                            var afgraphql = afgraphql1 + afgraphql2 + afgraphql3;
-                            postActionFulfillmentMessage(accessToken, afgraphql, function(err, accessToken) {});
-                          }
-                        }
-                      }
-                    }
-                  }
-                })
-              }
-            })
-          }
-          if (actionId.startsWith("SHARE")) {
-             // Get the searchwords from the actionId
-             var cardID = actionId.slice(6, actionId.length);
-             console.log("AF received SHARE for : ", cardID);
-
-             afShare(conversationId, targetUserId, targetDialogId, spaceId, cardID);
-          }
-        }
         return;
     }
 
-    if (eventType === "message-created") {
-        console.log("Message Created received.");
 
-        //Check if the first 8 letters form the string '@echobot'.
-        //This lets us "listen" for the '@echobot' keyword
-        if (req.body.content.substring(0, 8) === "@echobot") {
-
-            // slice off the '@echobot' part.
-            var term = req.body.content.slice(9, req.body.content.length);
-            console.log("Echobot received", term);
-
-            // Post it back to the space
-            // Let's try to authenticate
-            getJWTToken(APP_ID, APP_SECRET, function(jwt) {
-                console.log("JWT Token :", jwt);
-                // And post it back
-                postMessageToSpace(spaceId, jwt, term, function(success) {
-                    return;
-                })
-            })
-
-        }
-        return;
-    }
 
     // We don't do anything else, so return.
     console.log("INFO: Skipping unwanted eventType: " + eventType);
@@ -269,80 +136,11 @@ app.post("/test-message", jsonParser, function(req, res) {
 // ------------------------------------------
 // SHARE
 // ------------------------------------------
-function afShare(conversationId, targetUserId, targetDialogId, spaceId, cardID) {
-    // Preparing the dialog message
-    var demoName = "";
-    var demoDescription = "";
-    
-    if (cardId==="VERSE-00"){
-      demoName = "IBM Verse Video Demos";
-      demoDescription = "Are you looking for IBM Verse video, here is right place to go. Basic and Administration Videos Available for you.";
-    } else if  (cardId==="VERSE-01"){
-      demoName = "IBM Verse Conversation Guide";
-      demoDescription = "This asset will help you to be prepared for a Conversation with a Customer.";
-    } else if  (cardId==="VERSE-02"){
-      demoName = "IBM Verse Visualization Assets";
-      demoDescription = "Visit this page to see a list of amazing IBM Verse Click-through Demos using InVision.";
-    } else if  (cardId==="VERSE-03"){
-      demoName = "IBM Verse Live Environment";
-      demoDescription = "Are you looking for Live Environment to deliver an IBM Verse Demo. In this wiki page you will learn how to request a demo environment.";
-    } else if  (cardId==="VERSE-04"){
-      demoName = "IBM Verse Client Presentation";
-      demoDescription = "Do you need an IBM Verse Presentation for a Customer Meeting? Here is the right place to see different type of presentations";
-    }
-    var afgraphql1 = "mutation {createTargetedMessage(input: {conversationId: \"" + conversationId + "\" targetUserId: \"" + targetUserId + "\" targetDialogId: \"" + targetDialogId + "\" annotations: [{genericAnnotation: {title: \"Shared demo asset details !\" text: \"I've shared the details of the demo asset - " + demoName + " - with the space.\" buttons: [";
-    var afgraphql2 = "]}}]}){successful}}";
+function afShare(conversationId, targetUserId, targetDialogId, spaceId, cardId) {
+    // AFShare Code Here
 
-    var afgraphql = afgraphql1 + afgraphql2;
-
-    // preparing the share message
-    var messageName = "You requested details about demo asset ";
-
-    var demomessage = "Here are the details : " + textBreak;
-    demomessage += "*Asset* : " + demoName + textBreak;
-    demomessage += "*Description* : " + demoDescription + textBreak;
-
-    var messageTitle = "";
-    if (cardId..startsWith("VERSE")){
-      messageTitle = "IBM Verse Assets"
-    }
-
-    // Send the dialog message
-    getAuthFromAppIdSecret(APP_ID, APP_SECRET, function(error, accessToken) {
-      if (error) {
-        console.log("Unable to authenticate. No results will be shown.");
-      } else {
-        // Building the message to send to the space.
-        var messageData = {
-          type: "appMessage",
-          version: 1.0,
-          annotations: [
-            {
-              type: "generic",
-              version: 1.0,
-              color: "#0543D5",
-              title: messageTitle,
-              text: demomessage,
-              actor: {
-                name: messageName,
-                avatar: "",
-                url: ""
-              }
-            }
-          ]
-        };
-
-        postCustomMessageToSpace(accessToken, spaceId, messageData, function(err, accessToken) {
-          if (err) {
-            console.log("Unable to post custom message to space. No demo asset shared.");
-          }
-        });
-
-        postActionFulfillmentMessage(accessToken, afgraphql, function(err, accessToken) {});
-      };
-    });
-  });
 }
+
 
 //--------------------------------------------------------------------------
 //Post a custom message to a space
@@ -388,7 +186,7 @@ function postActionFulfillmentMessage(accessToken, afgraphql, callback) {
     //console.log(graphqlbody);
 
     if (!err && response.statusCode === 200) {
-
+      console.log("Status code === 200");
       var bodyParsed = JSON.parse(graphqlbody);
       callback(null, accessToken);
     } else if (response.statusCode !== 200) {
